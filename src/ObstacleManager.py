@@ -46,7 +46,23 @@ class ObstacleManager(object):
 		# square representing the robot is always aligned with the coordinate axes of the
 		# map for simplicity
 		# ----------------------------------------------------------
-
+		x = mapConfig[0]
+		y = mapConfig[1]
+		if (x >= self.mapWidth) or (y >= self.mapHeight):
+			return False
+		#imageBW in (height, width)
+		if (self.mapImageBW[y][x] >= 255):
+			return False
+		width = self.robotWidth/2
+		height = self.robotHeight/2
+		upLeft = ((x - width), (y + height))
+		upRight = ((x + width), (y + height))
+		downLeft = ((x - width), (y - height))
+		downRight = ((x + width), (y - height))
+		for xloc in range(upLeft[0], upRight[0]+1):
+			for yloc in range(upLeft[1], downLeft[1]+1):
+				if (self.mapImageBW[yloc][xloc] >= 255):
+					return False
 		return True
 
 	# Discretize the path into N configurations, where N = path_length / self.collision_delta
@@ -63,6 +79,10 @@ class ObstacleManager(object):
 		# -----------------------------------------------------------
 		# YOUR CODE HERE
 		# -----------------------------------------------------------
+		list_x = np.linspace(config1[0],config2[0], N)
+		list_y = np.linspace(config1[1],config2[1], N)
+		edgeLength = np.sqrt((config1[0]-config2[0])**2 + (config1[1]-config2[1])**2)
+
 		return list_x, list_y, edgeLength
 
 
@@ -78,7 +98,13 @@ class ObstacleManager(object):
 		# Discretize the path with the discretized_edge function above
 		# Check if all configurations along path are obstructed
 		# -----------------------------------------------------------
+		if !(self.get_state_validity(config1)) or !(self.get_state_validity(config2)):
+			return False
+		x, y, ec = self.discretize_edge(config1, config2)
 
+		for i in range(len(x)):
+			if !(self.get_state_validity((x[i],y[i]))):
+				return False
 		return True
 
 
