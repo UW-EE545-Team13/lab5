@@ -40,8 +40,31 @@ class HaltonPlanner(object):
     #   of node ids, get_solution() will compute the actual path in SE(2) based off of
     #   the node ids that you have found.
     #-------------------------------------------------------------
+    while self.open:
+      currentNode = min(self.open, key = self.open.get)
+      current_g = self.open[currentNode]
+      self.open.pop(current_g)
+      self.closed[currentNode] = current_g
+      if currentNode == self.tid:
+        return self.get_solution(currentNode)
+      
+    #let children of the currentNode equal the adjacent nodes
+    children = self.planningEnv.get_successors(currentNode)
 
-
+    for child in children:
+      if child in self.closed.keys():
+        continue
+      #child.g = currentNode.g + distance b/w child and current
+      #child.h = distance from child to end
+      #child.f = child.g + child.h
+      child_g = current_g + self.planningEnv.get_distance(currentNode, child)
+      child_h = self.planningEnv.get_heuristic(child, self.tid)
+      child_f = child_g + child_h
+      if child in self.open.keys():
+        if child_g > (self.open[child] - child_h):
+          continue
+      self.open[child] = child_f
+      self.parent[child] = currentNode
     return []
 
   # Try to improve the current plan by repeatedly checking if there is a shorter path between random pairs of points in the path
@@ -65,7 +88,19 @@ class HaltonPlanner(object):
         # Reformat the plan such that the new path is inserted and the old section of the path is removed between i and j
         # Be sure to CAREFULLY inspect the data formats of both the original plan and the plan returned
         # to ensure that you edit the path correctly
+      i = 0
+      j = 0
+      while i == j:
+        i = np.random.choice(numpy.arange(len(plan)))
+        j = np.random.choice(numpy.arange(len(plan)))
+      if i > j:
+        temp = i
+        i = j
+        j = temp
 
+      if self.planningEnv.manager.get_edge_validity(plan[i], plan[j]):
+        x, y = self.planningEnv.manager.discretize_edge(plan[i], plan[j])
+        
 
       elapsed = time.time() - t1
     return plan
