@@ -85,8 +85,11 @@ class HaltonPlanner(object):
   # Generate a plan
   # Assumes that the source and target were inserted just prior to calling this
   # Returns the generated plan
+
+  # lazy A star
   def plan(self):
     # self.show_graph() #uncomment this to visualize the graph
+    start_time = time.time()
     self.sid = self.planningEnv.graph.number_of_nodes() - 2 # Get source id
     self.tid = self.planningEnv.graph.number_of_nodes() - 1 # Get target id
 
@@ -115,7 +118,7 @@ class HaltonPlanner(object):
     while self.open:
       current_node_id = min(self.open, key=self.open.get)
       if current_node_id == self.tid:
-        return self.get_solution(current_node_id)
+        break
       if current_node_id in self.closed:
         continue
       self.closed[current_node_id] = self.open[current_node_id]
@@ -132,7 +135,49 @@ class HaltonPlanner(object):
           self.gValues[succ_id] = temp_g
           self.parent[succ_id] = current_node_id
           self.open[succ_id] = temp_g+self.planningEnv.get_heuristic(succ_id, self.tid)
-    return self.get_solution(current_node_id)
+    end_time = time.time()
+    path = self.get_solution(current_node_id)
+    print('Lazy A star used {} seconds to plan the path, the path has {} node(s) and the cost is {}'.format(end_time-start_time, len(path), self.gValues[current_node_id]))
+    return path
+
+  # Original A star
+  def plan_with_original_A_star(self):
+    start_time = time.time()
+    self.sid = self.planningEnv.graph.number_of_nodes() - 2 # Get source id
+    self.tid = self.planningEnv.graph.number_of_nodes() - 1 # Get target id
+
+    self.closed = {} # The closed list
+    self.parent = {self.sid:None} # A dictionary mapping children to their parents
+    self.open = {self.sid: 0 + self.planningEnv.get_heuristic(self.sid, self.tid)} # The open list
+    self.gValues = {self.sid:0} # A mapping from node to shortest found path length to that node
+    self.planIndices = []
+    self.cost = 0
+
+    while self.open:
+      current_node_id = min(self.open, key=self.open.get)
+      if current_node_id == self.tid:
+        break
+      if current_node_id in self.closed:
+        continue
+      self.closed[current_node_id] = self.open[current_node_id]
+      self.open.pop(current_node_id)
+      for succ_id in self.planningEnv.get_successors(current_node_id):
+        if succ_id in self.closed:
+          continue
+        succ_config = self.planningEnv.get_config(succ_id)
+        cur_node_config = self.planningEnv.get_config(current_node_id)
+        if self.planningEnv.manager.get_edge_validity(cur_node_config, succ_config):
+          temp_g = self.gValues[current_node_id] + self.planningEnv.get_distance(current_node_id, succ_id)
+          if succ_id in self.gValues and self.gValues[succ_id] < temp_g:
+            continue
+          self.gValues[succ_id] = temp_g
+          self.parent[succ_id] = current_node_id
+          self.open[succ_id] = temp_g+self.planningEnv.get_heuristic(succ_id, self.tid)
+    end_time = time.time()
+    path = self.get_solution(current_node_id)
+    print('Original A star used {} seconds to plan the path, the path has {} node(s) and the cost is {}'.format(end_time-start_time, len(path), self.gValues[current_node_id]))
+    return path
+
 
   # Try to improve the current plan by repeatedly checking if there is a shorter path between random pairs of points in the path
   def post_process(self, plan, timeout):
