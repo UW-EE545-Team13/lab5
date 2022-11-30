@@ -47,6 +47,29 @@ class ObstacleManager(object):
 		# map for simplicity
 		# ----------------------------------------------------------
 
+		# car width is the diagonal
+		car_square_width = numpy.sqrt(self.robotWidth ** 2 + self.robotLength ** 2)
+		left_bound = int(numpy.ceil(mapConfig[0] - car_square_width/2))
+		right_bound = int(numpy.ceil(mapConfig[0] + car_square_width/2))
+		front_bound = int(numpy.ceil(mapConfig[1] + car_square_width/2))
+		rear_bound = int(numpy.ceil(mapConfig[1] - car_square_width/2))
+
+		## car width is the car's actual width
+		# left_bound = mapConfig[0] - int(numpy.ceil(self.robotWidth/2))
+		# right_bound = mapConfig[0] + int(numpy.ceil(self.robotWidth/2))
+		# front_bound = mapConfig[1] + int(numpy.ceil(self.robotLength/2))
+		# rear_bound = mapConfig[1] - int(numpy.ceil(self.robotLength/2))
+		# print(left_bound, right_bound, front_bound, rear_bound)
+
+		if left_bound <= 0 or right_bound <= 0 or front_bound <=0 or rear_bound <=0:
+			return False
+		if left_bound >= self.mapWidth or right_bound >= self.mapWidth or front_bound >= self.mapHeight or rear_bound >=self.mapHeight:
+			return False
+		
+		robot_square = self.mapImageBW[rear_bound:front_bound, left_bound:right_bound]
+
+		if numpy.sum(robot_square):
+			return False
 		return True
 
 	# Discretize the path into N configurations, where N = path_length / self.collision_delta
@@ -63,6 +86,10 @@ class ObstacleManager(object):
 		# -----------------------------------------------------------
 		# YOUR CODE HERE
 		# -----------------------------------------------------------
+		edgeLength = numpy.linalg.norm(numpy.array(config1) - numpy.array(config2))
+		N = int(numpy.ceil(edgeLength / self.collision_delta))
+		list_x = numpy.linspace(config1[0], config2[0], N)
+		list_y = numpy.linspace(config1[1], config2[1], N)
 		return list_x, list_y, edgeLength
 
 
@@ -78,7 +105,13 @@ class ObstacleManager(object):
 		# Discretize the path with the discretized_edge function above
 		# Check if all configurations along path are obstructed
 		# -----------------------------------------------------------
+		if (not self.get_state_validity(config1)) or (not self.get_state_validity(config2)):
+			return False
+		list_x, list_y, _ = self.discretize_edge(config1, config2)
 
+		for i in list(zip(list_x, list_y)):
+			if not self.get_state_validity(i):
+				return False
 		return True
 
 

@@ -14,7 +14,7 @@ from HaltonEnvironment import HaltonEnvironment
 import GraphGenerator
 import Utils
 
-
+PLANNER_SERVICE_TOPIC = '/planner_node/get_plan'
 
 class PlannerNode(object):
 
@@ -73,8 +73,45 @@ class PlannerNode(object):
     else:
       self.plan_service = None
     
+    self.plan_test_service = rospy.Service(PLANNER_SERVICE_TOPIC, GetPlan, self.plan_test_cb)
+    
     
     print '[Planner Node] Ready to plan'
+
+  ##TO DO: need to double check this function
+  def plan_test_cb(self, msg):
+    angle = np.arctan((msg.target[1]-msg.source[1])/(msg.target[0]-msg.source[0]))
+    angle = 0
+    self.source_lock.acquire()
+    self.source_pose = [float(msg.source[0]), float(msg.source[1])]
+    self.source_yaw = angle
+    self.source_updated = True
+    self.source_lock.release()
+
+    self.target_lock.acquire()
+    self.target_pose = [float(msg.target[0]), float(msg.target[1])]
+    self.target_yaw = angle
+    self.target_updated = True
+    self.target_lock.release()  
+
+    self.plan_lock.acquire()
+    self.update_plan()
+
+    if self.cur_plan is not None:
+      gpr = GetPlanResponse()
+      # for i in xrange(len(self.cur_plan)):
+      #   pose = Pose()
+      #   pose.position.x = float(self.cur_plan[i][0])
+      #   pose.position.y = float(self.cur_plan[i][1])
+      #   pose.position.z = 0.0
+      #   pose.orientation = Utils.angle_to_quaternion(self.cur_plan[i][2])
+      #   gpr.plan.append(pose)    
+      gpr.plan = self.cur_plan
+      self.plan_lock.release()
+      return gpr
+    else:          
+      self.plan_lock.release() 
+      return
     
   def get_plan_cb(self, req):
     self.source_lock.acquire()
@@ -209,8 +246,8 @@ class PlannerNode(object):
       self.cur_plan = self.planner.plan()    
       
       if self.cur_plan is not None:
+        self.cur_plan = self.planner.post_process(self.cur_plan, 5)
         self.cur_plan = self.add_orientation(self.cur_plan)
-        #self.cur_plan = self.planner.post_process(self.cur_plan, 5)
         print '[Planner Node] ...plan complete'
       else:
         print '[Planner Node] ...could not compute a plan'

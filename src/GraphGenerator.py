@@ -159,6 +159,10 @@ if __name__ == "__main__":
     print("Getting map from service: ", map_service_name)
     rospy.wait_for_service(map_service_name)
 
+    car_width = rospy.get_param("/car_kinematics/car_width", 0.33)
+    car_length = rospy.get_param("/car_kinematics/car_length", 0.33)
+    collision_delta = rospy.get_param("~collision_delta", 0.05)  
+
     graph_file = rospy.get_param("~graph_file", None)
     map_msg = rospy.ServiceProxy(map_service_name, GetMap)().map
     map_info = map_msg.info
@@ -185,5 +189,5 @@ if __name__ == "__main__":
 
         # Generate the graph
         print 'Generating the graph'
-        G = euclidean_halton_graph(halton_points, disc_radius, bases, lower, upper, None, None, map_msg)
+        G = euclidean_halton_graph(halton_points, disc_radius, bases, lower, upper, None, None, map_msg, car_width, car_length, collision_delta)
         nx.write_graphml(G, riskmapFile)
